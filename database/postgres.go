@@ -113,7 +113,7 @@ func (repo *PostgresRepository) SetEnrollment(ctx context.Context, enrollment *m
 }
 
 func (repo *PostgresRepository) GetQuestionsPerTest(ctx context.Context, testId string) ([]*models.Question, error) {
-	rows, err := repo.db.QueryContext(ctx, "SELECT id, question FROM questions test_id = $1)", testId)
+	rows, err := repo.db.QueryContext(ctx, "SELECT id, question FROM questions WHERE test_id = $1", testId)
 	if err != nil {
 		return nil, err
 	}
