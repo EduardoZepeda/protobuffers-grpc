@@ -31,6 +31,10 @@ message SetQuestionResponse {
     bool ok =1;
 }
 
+message SetScoreResponse {
+    float score = 1;
+}
+
 message EnrollmentRequest {
     string student_id = 1;
     string test_id = 2;
@@ -41,7 +45,11 @@ message GetStudentsPerTestRequest {
 }
 
 message TakeTestRequest {
-    string answer = 1;
+    string id = 1;
+    string answer = 2;
+    string student_id = 3;
+    string test_id = 4;
+    string question_id = 5;
 }
 
 service TestService {
