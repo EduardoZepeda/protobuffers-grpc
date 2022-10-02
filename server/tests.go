@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"time"
@@ -149,7 +148,6 @@ func (s *TestServer) TakeTest(stream testpb.TestService_TakeTestServer) error {
 		}
 		currentAnswers = append(currentAnswers, currentAnswer)
 		for {
-			fmt.Println(currentAnswers)
 			if i < len(questions) {
 				currentQuestion = questions[i]
 			}
@@ -166,7 +164,6 @@ func (s *TestServer) TakeTest(stream testpb.TestService_TakeTestServer) error {
 				i++
 			}
 			answer, err := stream.Recv()
-			fmt.Println("Current answer:", currentAnswer.Answer, "Current question:", currentQuestion.Answer)
 			if err == io.EOF {
 				return nil
 			}
@@ -182,7 +179,6 @@ func (s *TestServer) TakeTest(stream testpb.TestService_TakeTestServer) error {
 			}
 			currentAnswers = append(currentAnswers, currentAnswer)
 			if i >= len(questions)-1 {
-				fmt.Println("Result:", correctAnswers, len(questions))
 				score := 100 * correctAnswers / (len(questions) - 1)
 				attempt := &models.Attempt{
 					StudentId: msg.GetStudentId(),

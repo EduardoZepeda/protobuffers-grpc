@@ -152,8 +152,9 @@ func (repo *PostgresRepository) SetAnswer(ctx context.Context, answer *models.An
 
 func (repo *PostgresRepository) GetScore(ctx context.Context, attemptId string) (int, error) {
 	var count int
-	err := repo.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM questions INNER JOIN answers ON answers.attempts_id = $1 WHERE questions.answer = answers.answer", attemptId).Scan(&count)
+	err := repo.db.QueryRowContext(ctx, "SELECT CEIL(100*CAST(COUNT(*) as float)/(SELECT COUNT(*) FROM questions WHERE test_id = test_id)) FROM questions INNER JOIN answers ON answers.attempts_id = $1 WHERE questions.answer = answers.answer", attemptId).Scan(&count)
 	if err != nil {
+		log.Println(err)
 		return 0, err
 	}
 	return count, err
