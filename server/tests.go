@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"time"
@@ -50,7 +51,7 @@ func (s *TestServer) SetTest(ctx context.Context, req *testpb.Test) (*testpb.Set
 func (s *TestServer) SetQuestions(stream testpb.TestService_SetQuestionsServer) error {
 	for {
 		msg, err := stream.Recv()
-		// Error cuando el cliente finaliza la conexión
+		// Error caused by the client when the connection is closed
 		if err == io.EOF {
 			return stream.SendAndClose(&testpb.SetQuestionResponse{
 				Ok: true,
@@ -120,36 +121,99 @@ func (s *TestServer) GetStudentsPerTest(req *testpb.GetStudentsPerTestRequest, s
 }
 
 func (s *TestServer) TakeTest(stream testpb.TestService_TakeTestServer) error {
-	// stream variable can receive and send, using Recv y Send methods, respectively
-	// creating the bidirectional stream
-	questions, err := s.repo.GetQuestionsPerTest(context.Background(), "t1")
-	if err != nil {
-		return err
-	}
-	i := 0
-	var currentQuestion = &models.Question{}
 	for {
-		if i < len(questions) {
-			currentQuestion = questions[i]
-		}
-		if i <= len(questions) {
-			questionToSend := &testpb.Question{
-				Id:       currentQuestion.Id,
-				Question: currentQuestion.Question,
-			}
-			err := stream.Send(questionToSend)
-			if err != nil {
-				return err
-			}
-			i++
-		}
-		answer, err := stream.Recv()
+		msg, err := stream.Recv()
 		if err == io.EOF {
 			return nil
 		}
 		if err != nil {
+			log.Println(err)
 			return err
 		}
-		log.Println("Answer: ", answer.GetAnswer())
+		// stream variable can receive and send, using Recv y Send methods, respectively
+		// creating the bidirectional stream
+		questions, err := s.repo.GetQuestionsPerTest(context.Background(), msg.GetTestId())
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		i := 0
+		correctAnswers := 0
+		var currentQuestion = &models.Question{}
+		var currentAnswers []*models.Answer
+		currentAnswer := &models.Answer{
+			QuestionId: msg.GetQuestionId(),
+			StudentId:  msg.GetStudentId(),
+			Answer:     msg.GetAnswer(),
+			TestId:     msg.GetTestId(),
+		}
+		currentAnswers = append(currentAnswers, currentAnswer)
+		for {
+			fmt.Println(currentAnswers)
+			if i < len(questions) {
+				currentQuestion = questions[i]
+			}
+			if i <= len(questions) {
+				questionToSend := &testpb.Question{
+					Id:       currentQuestion.Id,
+					Question: currentQuestion.Question,
+				}
+				err := stream.Send(questionToSend)
+				if err != nil {
+					log.Println(err)
+					return err
+				}
+				i++
+			}
+			answer, err := stream.Recv()
+			fmt.Println("Current answer:", currentAnswer.Answer, "Current question:", currentQuestion.Answer)
+			if err == io.EOF {
+				return nil
+			}
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+			currentAnswer := &models.Answer{
+				QuestionId: answer.GetQuestionId(),
+				StudentId:  answer.GetStudentId(),
+				Answer:     answer.GetAnswer(),
+				TestId:     answer.GetTestId(),
+			}
+			currentAnswers = append(currentAnswers, currentAnswer)
+			if i >= len(questions)-1 {
+				fmt.Println("Result:", correctAnswers, len(questions))
+				score := 100 * correctAnswers / (len(questions) - 1)
+				attempt := &models.Attempt{
+					StudentId: msg.GetStudentId(),
+					TestId:    msg.GetTestId(),
+					Score:     score,
+				}
+				// Score test and save it in database
+				lastInsertedId, err := s.repo.SetTestAttempt(context.Background(), attempt)
+				if err != nil {
+					log.Println(err)
+					return err
+				}
+				for _, answer := range currentAnswers {
+					answer.AttemptId = lastInsertedId
+					err := s.repo.SetAnswer(context.Background(), answer)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			}
+		}
 	}
+}
+
+func (s *TestServer) GetScore(ctx context.Context, req *testpb.GetScoreRequest) (*testpb.GetScoreResponse, error) {
+	score, err := s.repo.GetScore(ctx, req.GetAttemptId())
+	if err != nil {
+		return nil, err
+	}
+	return &testpb.GetScoreResponse{
+		Score: int32(score),
+	}, nil
 }

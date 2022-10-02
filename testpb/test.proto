@@ -45,12 +45,20 @@ message GetStudentsPerTestRequest {
 }
 
 message TakeTestRequest {
-    string id = 1;
-    string answer = 2;
-    string student_id = 3;
-    string test_id = 4;
-    string question_id = 5;
+    string answer = 1;
+    string student_id = 2;
+    string test_id = 3;
+    string question_id = 4;
 }
+
+message GetScoreResponse {
+    int32 score = 1;
+}
+
+message GetScoreRequest {
+    string attempt_id = 1;
+}
+
 
 service TestService {
     rpc GetTest(GetTestRequest) returns (Test);
@@ -59,5 +67,6 @@ service TestService {
     rpc EnrollStudents(stream EnrollmentRequest) returns (SetQuestionResponse);
     rpc GetStudentsPerTest(GetStudentsPerTestRequest) returns (stream student.Student);
     rpc TakeTest(stream TakeTestRequest) returns (stream Question);
+    rpc GetScore(GetScoreRequest) returns (GetScoreResponse);
 }
 

@@ -113,7 +113,7 @@ func (repo *PostgresRepository) SetEnrollment(ctx context.Context, enrollment *m
 }
 
 func (repo *PostgresRepository) GetQuestionsPerTest(ctx context.Context, testId string) ([]*models.Question, error) {
-	rows, err := repo.db.QueryContext(ctx, "SELECT id, question FROM questions WHERE test_id = $1", testId)
+	rows, err := repo.db.QueryContext(ctx, "SELECT id, question, answer FROM questions WHERE test_id = $1", testId)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (repo *PostgresRepository) GetQuestionsPerTest(ctx context.Context, testId 
 	var questions []*models.Question
 	for rows.Next() {
 		var question = models.Question{}
-		if err = rows.Scan(&question.Id, &question.Question); err == nil {
+		if err = rows.Scan(&question.Id, &question.Question, &question.Answer); err == nil {
 			questions = append(questions, &question)
 		}
 	}
@@ -134,4 +134,27 @@ func (repo *PostgresRepository) GetQuestionsPerTest(ctx context.Context, testId 
 		return nil, err
 	}
 	return questions, nil
+}
+
+func (repo *PostgresRepository) SetTestAttempt(ctx context.Context, attempt *models.Attempt) (int, error) {
+	var lastInsertId int
+	err := repo.db.QueryRowContext(ctx, "INSERT INTO attempts(student_id, test_id, score) VALUES($1, $2, $3) RETURNING id", attempt.StudentId, attempt.TestId, attempt.Score).Scan(&lastInsertId)
+	if err != nil {
+		return 0, err
+	}
+	return lastInsertId, err
+}
+
+func (repo *PostgresRepository) SetAnswer(ctx context.Context, answer *models.Answer) error {
+	_, err := repo.db.ExecContext(ctx, "INSERT INTO answers(answer, question_id, attempts_id) VALUES($1, $2, $3)", answer.Answer, answer.QuestionId, answer.AttemptId)
+	return err
+}
+
+func (repo *PostgresRepository) GetScore(ctx context.Context, attemptId string) (int, error) {
+	var count int
+	err := repo.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM questions INNER JOIN answers ON answers.attempts_id = $1 WHERE questions.answer = answers.answer", attemptId).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, err
 }

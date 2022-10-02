@@ -29,6 +29,7 @@ type TestServiceClient interface {
 	EnrollStudents(ctx context.Context, opts ...grpc.CallOption) (TestService_EnrollStudentsClient, error)
 	GetStudentsPerTest(ctx context.Context, in *GetStudentsPerTestRequest, opts ...grpc.CallOption) (TestService_GetStudentsPerTestClient, error)
 	TakeTest(ctx context.Context, opts ...grpc.CallOption) (TestService_TakeTestClient, error)
+	GetScore(ctx context.Context, in *GetScoreRequest, opts ...grpc.CallOption) (*GetScoreResponse, error)
 }
 
 type testServiceClient struct {
@@ -188,6 +189,15 @@ func (x *testServiceTakeTestClient) Recv() (*Question, error) {
 	return m, nil
 }
 
+func (c *testServiceClient) GetScore(ctx context.Context, in *GetScoreRequest, opts ...grpc.CallOption) (*GetScoreResponse, error) {
+	out := new(GetScoreResponse)
+	err := c.cc.Invoke(ctx, "/test.TestService/GetScore", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestServiceServer is the server API for TestService service.
 // All implementations must embed UnimplementedTestServiceServer
 // for forward compatibility
@@ -198,6 +208,7 @@ type TestServiceServer interface {
 	EnrollStudents(TestService_EnrollStudentsServer) error
 	GetStudentsPerTest(*GetStudentsPerTestRequest, TestService_GetStudentsPerTestServer) error
 	TakeTest(TestService_TakeTestServer) error
+	GetScore(context.Context, *GetScoreRequest) (*GetScoreResponse, error)
 	mustEmbedUnimplementedTestServiceServer()
 }
 
@@ -222,6 +233,9 @@ func (UnimplementedTestServiceServer) GetStudentsPerTest(*GetStudentsPerTestRequ
 }
 func (UnimplementedTestServiceServer) TakeTest(TestService_TakeTestServer) error {
 	return status.Errorf(codes.Unimplemented, "method TakeTest not implemented")
+}
+func (UnimplementedTestServiceServer) GetScore(context.Context, *GetScoreRequest) (*GetScoreResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetScore not implemented")
 }
 func (UnimplementedTestServiceServer) mustEmbedUnimplementedTestServiceServer() {}
 
@@ -371,6 +385,24 @@ func (x *testServiceTakeTestServer) Recv() (*TakeTestRequest, error) {
 	return m, nil
 }
 
+func _TestService_GetScore_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetScoreRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestServiceServer).GetScore(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/test.TestService/GetScore",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestServiceServer).GetScore(ctx, req.(*GetScoreRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestService_ServiceDesc is the grpc.ServiceDesc for TestService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -385,6 +417,10 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetTest",
 			Handler:    _TestService_SetTest_Handler,
+		},
+		{
+			MethodName: "GetScore",
+			Handler:    _TestService_GetScore_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

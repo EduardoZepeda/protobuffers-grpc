@@ -23,15 +23,26 @@ CREATE TABLE questions(
   FOREIGN KEY (test_id) REFERENCES tests(id)
 );
 
+DROP TABLE IF EXISTS attempts;
+
+CREATE TABLE attempts(
+  id SERIAL PRIMARY KEY,
+  test_id VARCHAR(32) NOT NULL,
+  student_id VARCHAR(32) NOT NULL,
+  score INT NOT NULL,
+  FOREIGN KEY (student_id) REFERENCES students(id),
+  FOREIGN KEY (test_id) REFERENCES tests(id)
+);
+
 DROP TABLE IF EXISTS answers;
 
 CREATE TABLE answers(
-  id VARCHAR(32) PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   answer VARCHAR(255) NOT NULL,
-  test_id VARCHAR(32) NOT NULL,
-  student_id VARCHAR(32) NOT NULL,
-  FOREIGN KEY (student_id) REFERENCES students(id),
-  FOREIGN KEY (test_id) REFERENCES tests(id)
+  question_id VARCHAR(32) NOT NULL,
+  attempts_id INT NOT NULL,
+  FOREIGN KEY (question_id) REFERENCES questions(id),
+  FOREIGN KEY (attempts_id) REFERENCES attempts(id)
 );
 
 DROP TABLE IF EXISTS enrollments;
